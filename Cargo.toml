@@ -1,0 +1,18 @@
+[package]
+name = "component-weighted-bpe"
+version = "0.1.0"
+edition = "2021"
+description = "Exact incremental BPE with component-weighted centroid search: O(log t) worst-case time per appended byte"
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+keywords = ["bpe", "tokenizer", "tokenization", "incremental"]
+categories = ["text-processing", "algorithms"]
+publish = false
+
+[dependencies]
+
+[profile.release]
+overflow-checks = true
+
+[lints.rust]
+unsafe_code = "deny"

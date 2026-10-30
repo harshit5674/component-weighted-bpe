@@ -1,0 +1,30 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the paper below."
+title: "component-weighted-bpe"
+abstract: "Exact incremental BPE with component-weighted centroid search: O(log t) worst-case time per appended byte."
+authors:
+  - family-names: Verma
+    given-names: Harshit
+    email: harshit.verma@yale.edu
+    affiliation: Yale University
+  - family-names: Ying
+    given-names: Rex
+    email: rex.ying@yale.edu
+    affiliation: Yale University
+license:
+  - MIT
+  - Apache-2.0
+preferred-citation:
+  type: conference-paper
+  title: "Component-Weighted Centroid Search for Exact Incremental BPE"
+  authors:
+    - family-names: Verma
+      given-names: Harshit
+    - family-names: Ying
+      given-names: Rex
+  collection-title: "AXIOM: Foundations of Efficient Deep Learning, NeurIPS 2026 Workshop"
+  year: 2026
+  url: "https://arxiv.org/abs/2609.40016"
+  identifiers:
+    - type: other
+      value: "arXiv:2609.40016"
