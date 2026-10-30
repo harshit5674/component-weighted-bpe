@@ -57,7 +57,8 @@ Token IDs `0..alphabet.len()` are the bytes of the alphabet, in order, and rule 
 | `examples/witness_probes.rs` | probe counts on the constructed family (Figure 2) |
 | `examples/vocab_stats.rs` | probe statistics and update times on real vocabularies (Section 5, Appendix E) |
 | `scripts/prepare_vocab.py` | converts a Hugging Face `tokenizer.json` into the format read by `vocab_stats` |
-| `scripts/fetch_data.sh` | downloads the vocabularies and texts used in Section 5 |
+| `scripts/fetch_data.sh` | downloads and checks the vocabularies and texts used in Section 5 |
+| `scripts/make_inputs.py` | makes the synthetic inputs used in Section 5 |
 | `scripts/check_construction.py` | an independent Python check of the construction |
 
 ## Reproducing the paper
@@ -98,16 +99,29 @@ These are exactly k(k+1)/2 + 1 and k. The vocabulary of this family has a total 
 
 ```bash
 sh scripts/fetch_data.sh
-cargo run --release --example vocab_stats -- data/gpt2.ibpe data/english.txt data/code.txt
-cargo run --release --example vocab_stats -- data/roberta-base.ibpe data/english.txt data/code.txt
-cargo run --release --example vocab_stats -- data/gpt-neox-20b.ibpe data/english.txt data/code.txt
+cargo run --release --example vocab_stats -- data/qwen2.5.ibpe data/alice.txt data/python-code.txt data/agent-json.txt data/repeat-a.txt data/repeat-space.txt data/repeat-hyphen.txt
+cargo run --release --example vocab_stats -- data/bloom.ibpe data/alice.txt data/pride-and-prejudice.txt data/python-code.txt
 ```
 
-`fetch_data.sh` needs `curl`, `git` and Python 3. It downloads the GPT-2, RoBERTa-base and GPT-NeoX-20B tokenizers from Hugging Face, *War and Peace* from Project Gutenberg and the TheAlgorithms/Rust repository, cuts one million bytes of English and of Rust code, and converts the tokenizers. Texts are tokenized as continuous byte strings, without pre-tokenization, normalization or special tokens.
+`fetch_data.sh` needs `curl` and Python 3, and downloads about 40 MB. It fetches the inputs of Appendix E of the paper:
 
-For each text and search, `vocab_stats` prints one JSON line: the share of updates that searched at least one interval, the longest list searched, the 50th/95th/99th/99.9th percentiles and maximum of probes per update, the median time per update, and the number of prefixes checked against offline BPE. It stops with an error if the two searches ever return different tokens.
+* six tokenizers from Hugging Face, each pinned to a commit: GPT-2, Pythia, Qwen2.5, DeepSeek-V4-Pro, OLMo-3.1 and BLOOM;
+* *Alice's Adventures in Wonderland* and *Pride and Prejudice* from Project Gutenberg;
+* `Lib/asyncio/base_events.py` from CPython 3.13.0.
 
-The paper's text snapshots are not included, so results can differ slightly from the paper; the script records hashes of the files it downloads. Times depend on the machine. Run on an idle machine and raise `--repeats` for stable values.
+It then makes the synthetic inputs with `make_inputs.py`: 1,024 agent-style JSON records and 131,072-byte runs of `a`, space and hyphen. Finally it converts the tokenizers. Every downloaded file and every converted vocabulary is checked against the SHA-256 hash of the file used in the paper, and the script stops on a mismatch.
+
+The paper measured GPT-2, Pythia and Qwen2.5 on all six inputs except *Pride and Prejudice*, and DeepSeek-V4-Pro, OLMo-3.1 and BLOOM on the two novels and the Python file. Texts are tokenized as continuous byte strings, without pre-tokenization, normalization or special tokens.
+
+For each text and search, `vocab_stats` prints one JSON line with:
+
+* the mean and maximum probes per byte, which are the probe columns of the paper's Tables 1 and 2;
+* the share of updates that searched at least one interval, and the longest list searched;
+* the percentiles of probes per update;
+* the median time per update, in nanoseconds and MiB/s;
+* the number of prefixes checked against offline BPE.
+
+It stops with an error if the two searches ever return different tokens. With the inputs above, the probe counts reproduce all 54 cases of Tables 1 and 2 exactly. The paper's throughput comes from a separate harness that ran three or five fresh processes per case on an Apple M4. Times depend on the machine, so run on an idle machine and raise `--repeats` for stable values.
 
 ### Independent check of the construction
 

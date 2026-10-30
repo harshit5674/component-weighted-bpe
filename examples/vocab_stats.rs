@@ -8,16 +8,20 @@
 //! special tokens. For each text and each branch search this prints one JSON
 //! line with:
 //!
+//! * `mean_probes_per_byte` and `max_probes`: interval probes per update, as
+//!   in Tables 1 and 2 of the paper;
 //! * `searched_pct`: updates whose search read at least one interval;
 //! * `max_list`: the longest interval list searched;
 //! * `probes` and `endpoint_comparisons`: p50/p95/p99/p99.9/max per update,
 //!   over the updates that searched;
-//! * `ns_per_update`: median over R timed passes (default 5) after one warm-up;
+//! * `ns_per_update` and `mib_per_s`: median over R timed passes (default 5)
+//!   after one warm-up;
 //! * `audits`: prefixes, evenly spaced and including the whole text, whose
 //!   reconstructed tokenization was compared with offline heap BPE.
 //!
 //! Both searches must return the same token after every byte; the program
-//! stops with an error otherwise. Timings depend on the machine.
+//! stops with an error otherwise. Probe counts are exact. Timings depend on the
+//! machine; the paper's came from several fresh processes per case.
 use component_weighted_bpe::*;
 use std::path::Path;
 use std::sync::Arc;
@@ -128,6 +132,7 @@ fn main() -> Result<()> {
         for (m, c) in compiled.iter().enumerate() {
             let mut stream = CentroidStream::with_capacity(c.clone(), text.len())?;
             let (mut probes, mut comparisons, mut max_list) = (Vec::new(), Vec::new(), 0);
+            let mut total_probes = 0usize;
             for (i, &b) in text.iter().enumerate() {
                 let (token, s) = stream.append_profiled(b)?;
                 if m == 0 {
@@ -135,6 +140,7 @@ fn main() -> Result<()> {
                 } else if token != reference[i] {
                     return Err(format!("searches disagree at byte {}", i + 1).into());
                 }
+                total_probes += s.interval_probes;
                 if s.interval_probes > 0 {
                     probes.push(s.interval_probes);
                     comparisons.push(s.endpoint_comparisons);
@@ -161,17 +167,21 @@ fn main() -> Result<()> {
                 }
             }
             samples.sort_by(f64::total_cmp);
+            let ns = samples[samples.len() / 2];
             println!(
-                "{{\"kind\":\"text\",\"vocab\":\"{}\",\"text\":\"{}\",\"search\":\"{:?}\",\"bytes\":{},\"searched_pct\":{:.2},\"max_list\":{},\"probes\":{},\"endpoint_comparisons\":{},\"ns_per_update\":{:.2},\"audits\":{}}}",
+                "{{\"kind\":\"text\",\"vocab\":\"{}\",\"text\":\"{}\",\"search\":\"{:?}\",\"bytes\":{},\"mean_probes_per_byte\":{:.3},\"max_probes\":{},\"searched_pct\":{:.2},\"max_list\":{},\"probes\":{},\"endpoint_comparisons\":{},\"ns_per_update\":{:.2},\"mib_per_s\":{:.1},\"audits\":{}}}",
                 name(vocab_path),
                 name(text_path),
                 c.report().search,
                 text.len(),
+                total_probes as f64 / text.len().max(1) as f64,
+                probes.iter().max().copied().unwrap_or(0),
                 100.0 * probes.len() as f64 / text.len().max(1) as f64,
                 max_list,
                 tails(probes),
                 tails(comparisons),
-                samples[samples.len() / 2],
+                ns,
+                1e9 / ns / (1024.0 * 1024.0),
                 checked
             );
         }
