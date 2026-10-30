@@ -69,7 +69,7 @@ Token IDs `0..alphabet.len()` are the bytes of the alphabet, in order, and rule 
 
 * every normalized dictionary over two letters with at most three rules, on every 7-byte input: 399 dictionaries and 715,008 prefix comparisons;
 * 48 random dictionaries over four letters with up to 20 rules, and regression cases for self-pair rules and long successor chains;
-* the constructed family for k ≤ 9, where it also checks the exact probe counts below.
+* the constructed family, at every prefix for k ≤ 7 with distinct letters and for k ≤ 6 with repeated letters. For k ≤ 9 it also compares the whole input with the heap reference tokenizer and checks the exact probe counts below.
 
 A counting allocator also checks that appends to a stream with reserved capacity allocate nothing.
 
@@ -129,13 +129,13 @@ It stops with an error if the two searches ever return different tokens. With th
 python3 scripts/check_construction.py
 ```
 
-This standard-library Python script implements literal BPE, the validity intervals, the centroid decomposition and both searches separately from the Rust code. It checks every claim of Appendices C and D for k ≤ 6 with distinct letters, for repeated letters, and for the fixed-alphabet variant with k ≤ 4. It runs in under a second.
+This standard-library Python script implements literal BPE, the validity intervals, the centroid decomposition and both searches separately from the Rust code. It checks every claim of Appendices C and D for k ≤ 6 with distinct letters, for 3 ≤ k ≤ 6 with repeated letters, and for the fixed-alphabet variant with k ≤ 4. It runs in under a second.
 
 ## Notes on this implementation
 
 * This is an independent implementation of Jiang and Gong's framework, not their released code ([ModelTC/mtc-inc-bpe](https://github.com/ModelTC/mtc-inc-bpe)). It uses a dense Aho–Corasick automaton with completed transitions, so the matcher needs (automaton states) × (alphabet size) words; Jiang and Gong use a more compact tiled table.
 * The count-balanced search finds the last interval whose lower endpoint is at most the query, then checks that interval's right endpoint as a separate probe. This convention fixes the exact count k(k+1)/2 + 1 on the constructed family. Other binary-search conventions change only the additive constant.
-* `Dictionary::new` accepts only normalized dictionaries: every token is produced by exactly one rule, and tokenizing its spelling returns that token. It rejects other merge lists rather than normalizing them. `scripts/prepare_vocab.py` drops the merges of a Hugging Face vocabulary that would break this and lists them in a report.
+* `Dictionary::new` accepts only normalized dictionaries: no two rules produce the same token, and tokenizing a token's spelling returns that token. It rejects other merge lists rather than normalizing them. `scripts/prepare_vocab.py` drops the merges of a Hugging Face vocabulary that would break this and lists them in a report.
 * Compilation charges its tables against `CentroidOptions::max_table_bytes` (256 MiB by default) and fails rather than exceed it.
 * Appends to a stream with reserved capacity allocate nothing. Compilation, `reserve` and `reconstruct` may allocate. The library contains no `unsafe` code.
 
@@ -161,6 +161,7 @@ Please also cite the work this builds on:
   booktitle     = {Proceedings of the 43rd International Conference on Machine Learning},
   series        = {Proceedings of Machine Learning Research},
   volume        = {306},
+  pages         = {52312--52342},
   year          = {2026},
   eprint        = {2605.30813},
   archivePrefix = {arXiv}
