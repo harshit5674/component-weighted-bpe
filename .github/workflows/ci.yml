@@ -6,14 +6,24 @@ on:
 
 jobs:
   rust:
+    strategy:
+      fail-fast: false
+      matrix:
+        # 1.97.1 is the version the code was tested with; it also runs the
+        # formatting and lint checks. The latest stable runs the tests only, so
+        # lints added after 1.97.1 do not fail the build.
+        toolchain: ["1.97.1", stable]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: ${{ matrix.toolchain }}
           components: rustfmt, clippy
-      - run: cargo fmt --check
-      - run: cargo clippy --all-targets -- -D warnings
+      - if: matrix.toolchain == '1.97.1'
+        run: cargo fmt --check
+      - if: matrix.toolchain == '1.97.1'
+        run: cargo clippy --all-targets -- -D warnings
       - run: cargo test --release --all-targets
       - run: cargo test --doc
       - run: cargo run --release --example witness_probes -- 10

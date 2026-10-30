@@ -21,7 +21,7 @@ Both return exactly the same tokens. Matching, validity intervals, the centroid 
 
 ## Quick start
 
-You need a stable Rust toolchain. The crate has no dependencies.
+You need a stable Rust toolchain; the code was tested with Rust 1.97.1. The crate has no dependencies.
 
 ```rust
 use component_weighted_bpe::*;
